@@ -54,14 +54,14 @@ exports.register = async (req, res) => {
   const t = await db.sequelize.transaction();
   
   try {
-    const { email, password, phone_number, role, first_name, last_name, business_name } = req.body;
+    const { email, password, phone_number, role, first_name, last_name, business_name,address } = req.body;
 
     // 1. Create the User (password will be auto-hashed by the model hook)
     const user = await User.create({
       email,
       password_hash: password, // The hook converts this to a hash
       phone_number,
-      role
+      role,
     }, { transaction: t });
 
     // 2. Create the associated UserProfile
@@ -69,7 +69,8 @@ exports.register = async (req, res) => {
       user_id: user.user_id,
       first_name,
       last_name,
-      business_name: business_name || null
+      business_name: business_name || null,
+      address
     }, { transaction: t });
 
     // 3. If both are successful, commit the transaction
@@ -80,7 +81,7 @@ exports.register = async (req, res) => {
   } catch (error) {
     // 4. If anything fails, roll back the transaction
     await t.rollback();
-    res.status(500).send({ message: error.message || 'Registration failed.' });
+    res.status(500).send({ message: error.message || 'Registration failed.',info: error.errors });
   }
 };
 

@@ -1,30 +1,24 @@
 const express = require('express');
 const router = express.Router();
 
-// --- We will import middleware and controllers here ---
-// const bookingController = require('../controllers/booking.controller');
-// const { verifyToken } = require('../middleware/auth.middleware');
-// const { isFarmer, isHarvesterOwner } = require('../middleware/role.middleware');
+// --- middleware and controllers  ---
+const bookingController = require('../controllers/booking.controller');
+ const { verifyToken } = require('../middleware/auth.middleware');
+ const { isFarmer, isHarvesterOwner } = require('../middleware/role.middleware');
 
 // Apply token verification to all routes in this file
-// router.use(verifyToken);
+router.use(verifyToken,isFarmer);
 
-/**
- * @route POST /api/bookings
- * @description A Farmer creates a new booking request.
- * @access Private (Farmer only)
- */
-// router.post('/', [isFarmer], bookingController.createBooking);
-router.post('/', (req, res) => {
-  res.status(201).json({ message: 'Create new booking' });
-});
+// Route POST /api/bookings || A Farmer creates a new booking request. || access Private (Farmer only)
+router.post('/', [isFarmer], bookingController.createBooking);
+
 
 /**
  * @route GET /api/bookings
  * @description Get all bookings for the current user (context-aware: Farmer sees theirs, Owner sees theirs).
  * @access Private
  */
-// router.get('/', bookingController.getMyBookings);
+router.get('/', bookingController.getMyBookings);
 router.get('/', (req, res) => {
   res.status(200).json({ message: 'Get my bookings' });
 });

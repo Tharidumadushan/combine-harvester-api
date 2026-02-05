@@ -21,7 +21,7 @@ const isHarvesterOwner = (req, res, next) => {
  * This middleware MUST run AFTER verifyToken.
  */
 const isFarmer = (req, res, next) => {
-  if (req.userRole && req.userRole === 'FARMER') {
+  if (req.userRole && req.userRole === 'FARMER' || 'SYSTEM_ADMIN') {
     next();
     return;
   }

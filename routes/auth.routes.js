@@ -1,31 +1,30 @@
 const express = require('express');
 const router = express.Router();
 
-// --- We will import controllers and validation middleware here ---
-// const authController = require('../controllers/auth.controller');
-// const { validateRegistration } = require('../middleware/validate.middleware');
+// --- import controllers and validation middleware here ---
+const authController = require('../controllers/auth.controller');
+//const { validateRegistration } = require('../middleware/validate.middleware');
 
+//----------------------------------------------------------------------------------
 /**
  * @route POST /api/auth/register
  * @description Register a new user (Farmer or Harvester Owner).
  * @access Public
  */
-// router.post('/register',, authController.register);
-router.post('/register', (req, res) => {
-  res.status(201).json({ message: 'Register endpoint' });
-});
+router.post('/register', authController.register);
+// router.post('/register', (req, res) => {
+//   authController.register(req,res);
+//   res.status(201).json({ message: 'Register endpoint' });
+// });
 
-/**
+/**-----------------------------------------------------------------------------------
  * @route POST /api/auth/login
  * @description Log in a user and return tokens.
  * @access Public
  */
-// router.post('/login', authController.login);
-router.post('/login', (req, res) => {
-  res.status(200).json({ message: 'Login endpoint' });
-});
+router.post('/login', authController.login);
 
-/**
+/**------------------------------------------------------------------------------------
  * @route POST /api/auth/refresh-token
  * @description Use the refresh token (from HttpOnly cookie) to get a new access token.
  * @access Public

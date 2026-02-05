@@ -1,11 +1,7 @@
 const db = require('../models');
 const Field = db.Field;
 
-/**
- * @route POST /api/fields
- * @description Create a new field (with GeoJSON polygon data).
- * @access Private (Farmer only)
- */
+
 exports.createField = async (req, res) => {
   try {
     const farmerId = req.userId; // From auth middleware
@@ -31,11 +27,6 @@ exports.createField = async (req, res) => {
   }
 };
 
-/**
- * @route GET /api/fields
- * @description Get all fields belonging to the logged-in farmer.
- * @access Private (Farmer only)
- */
 exports.getMyFields = async (req, res) => {
   try {
     const farmerId = req.userId;
@@ -50,4 +41,15 @@ exports.getMyFields = async (req, res) => {
   }
 };
 
-//... other field management functions like getFieldById, updateField...
+exports.getFieldById = async(req,res)=>{
+  try {
+    const field_id = req.params.fieldId;
+    const fields = await Field.findAll({
+      where: { field_id: field_id }
+    });
+    res.status(200).send(fields);
+  } catch (error) {
+    res.status(500).send({ message: error.message || 'Error fetching field.' });
+  }
+}
+

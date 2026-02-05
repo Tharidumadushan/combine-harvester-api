@@ -11,6 +11,7 @@ const app = express();
 // Enable CORS for React frontend
 app.use(cors({
   origin: 'http://localhost:3000', 
+  //origin: 'http://192.168.1.196:3000',
   credentials: true // Allows cookies to be sent
 }));
 app.use(express.json()); // Parses incoming JSON request bodies

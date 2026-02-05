@@ -22,11 +22,12 @@ const validate = (validations) => {
   };
 };
 
+const message = 'Test';
 /**
  * Validation rules for the user registration endpoint.
  */
 const validateRegistration = [
-  check('email').withMessage("Role must be either 'FARMER' or 'HARVESTER_OWNER'.")
+  check('email').withMessage(message,"Role must be either 'FARMER' or 'HARVESTER_OWNER'.")
 ];
 
 /**
@@ -34,11 +35,11 @@ const validateRegistration = [
  */
 const validateLogin = [
   check('email')
-  .isEmail().withMessage('Please provide a valid email address.')
+  .isEmail().withMessage(message,'Please provide a valid email address.')
   .normalizeEmail(),
   
   check('password')
-  .notEmpty().withMessage('Password is required.')
+  .notEmpty().withMessage(message,'Password is required.')
 ];
 
 /**

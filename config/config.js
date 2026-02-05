@@ -101,6 +101,7 @@ module.exports = {
       }
     }
   },
+  "timezone": "+05:30",
 
   // --- JWT AUTHENTICATION CONFIGURATION ---
   // These are also loaded from.env and exported here
