@@ -6,11 +6,8 @@ const Field = db.Field;
 const Harvester = db.Harvester;
 const HarvesterPricing = db.HarvesterPricing;
 
-/**
- * @route POST /api/bookings
- * @description A Farmer creates a new booking request.
- * @access Private (Farmer only)
- */
+// POST /api/bookings || description A Farmer creates a new booking request. || access Private (Farmer only)
+//#region Create
 exports.createBooking = async (req, res) => {
   const t = await db.sequelize.transaction();
   try {
@@ -81,12 +78,9 @@ exports.createBooking = async (req, res) => {
     res.status(500).send({ message: error.message || 'Error creating booking.' });
   }
 };
+//#endregion
 
-/**
- * @route GET /api/bookings
- * @description Get all bookings for the current user (context-aware).
- * @access Private
- */
+// @route GET /api/bookings || description Get all bookings for the current user (context-aware). || access Private
 exports.getMyBookings = async (req, res) => {
   try {
     const userId = req.userId;
@@ -113,11 +107,7 @@ exports.getMyBookings = async (req, res) => {
   }
 };
 
-/**
- * @route PUT /api/bookings/:bookingId/accept
- * @description A Harvester Owner accepts a booking request.
- * @access Private (Harvester Owner only)
- */
+// Route PUT /api/bookings/:bookingId/accept || description A Harvester Owner accepts a booking request. || access Private (Harvester Owner only)
 exports.acceptBooking = async (req, res) => {
   const t = await db.sequelize.transaction();
   try {
