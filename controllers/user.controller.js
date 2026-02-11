@@ -15,7 +15,7 @@ exports.getMyProfile = async (req, res) => {
       attributes: ['email', 'phone_number', 'role', 'language_preference'], // Exclude password_hash
       include: {
         model: UserProfile,
-        attributes: ['first_name', 'last_name', 'business_name', 'address']
+        attributes: ['first_name', 'last_name', 'business_name', 'address','city']
       }
     });
 
