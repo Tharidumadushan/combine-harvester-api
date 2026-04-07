@@ -16,7 +16,7 @@ router.post('/', [isFarmer], bookingController.createBooking);
 router.get('/', bookingController.getMyBookings);
 
 //[Route] GET /api/bookings/:bookingId [Description] Get details for a single booking. [Access] Private (Farmer or Owner of this booking)
-// router.get('/:bookingId', bookingController.getBookingById);
+ router.get('/:bookingId', bookingController.getBookingById);
 
 // Route PUT /api/bookings/:bookingId/reject || Description A Farmer cancels their booking. || Access Private (Farmer only)
 router.put('/:bookingId/cancel', [isFarmer], bookingController.cancelBooking);

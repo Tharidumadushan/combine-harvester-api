@@ -6,6 +6,8 @@ const Field = db.Field;
 const Harvester = db.Harvester;
 const HarvesterPricing = db.HarvesterPricing;
 const HarvesterAvailability = db.HarvesterAvailability;
+const UserProfile = db.UserProfile;
+const User = db.User;
 
 exports.checkAvailability = async (req, res) => {
   const t = await db.sequelize.transaction();
@@ -59,7 +61,7 @@ exports.createBooking = async (req, res) => {
     // Disable the Slot
     const availability = await HarvesterAvailability.update({
       active: false
-    },{
+    }, {
       where: {
         vailability_id: time_slot_id
       }
@@ -96,31 +98,60 @@ exports.createBooking = async (req, res) => {
 exports.getMyBookings = async (req, res) => {
   try {
     const userId = req.userId;
-    const userRole = req.userRole; // This should be added by your auth middleware
+    const userRole = req.userRole;
 
     let bookings;
+
     if (userRole === 'FARMER') {
-      bookings = await Booking.findAll({ 
-        where: { farmer_id: userId },include:{
-          
-          model :Field,
-          model: Harvester
-        }
+      bookings = await Booking.findAll({
+        where: { farmer_id: userId },
+        // array [] to include multiple models
+        include: [
+          { model: Field },
+          { model: Harvester }
+        ]
       });
     }
-
     else if (userRole === 'HARVESTER_OWNER') {
       bookings = await Booking.findAll({
-        include: {
-          model: Harvester,
-          where: { owner_id: userId },
-        }
+        include: [
+          {
+            model: Harvester,
+            where: { owner_id: userId },
+            required: true // Ensures only bookings with the owner's harvester are returned
+          },
+          { model: Field }
+        ]
       });
-    } else {
-      bookings = await Booking.findAll();  // Admins 
+    }
+    else {
+      // Admins usually want to see everything
+      bookings = await Booking.findAll({
+        include: [{ model: Field }, { model: Harvester }]
+      });
     }
 
     res.status(200).send(bookings);
+  } catch (error) {
+    res.status(500).send({ message: error.message || 'Error fetching bookings.' });
+  }
+};
+
+exports.getBookingById = async (req, res) => {
+  try {
+    const bookingId = req.params.bookingId
+    let bookings;
+
+    bookings = await Booking.findAll({
+      where: { booking_id: bookingId },
+      include: [
+        { model: Field },
+        { model: Harvester }
+      ]
+    });
+
+    res.status(200).send(bookings);
+
   } catch (error) {
     res.status(500).send({ message: error.message || 'Error fetching bookings.' });
   }
@@ -216,8 +247,8 @@ exports.acceptBooking = async (req, res) => {
       channel: 'EMAIL'
     }, { transaction: t });
 
-    await t.rollback();
-    //await t.commit();
+    //await t.rollback();
+    await t.commit();
     res.status(200).send(booking);
 
   } catch (error) {
@@ -227,7 +258,7 @@ exports.acceptBooking = async (req, res) => {
 };
 
 exports.rejectBooking = async (req, res) => {
-  
+
   const t = await db.sequelize.transaction();
   try {
     const ownerId = req.userId;
@@ -273,8 +304,8 @@ exports.rejectBooking = async (req, res) => {
       channel: 'EMAIL'
     }, { transaction: t });
 
-    await t.rollback();
-    //await t.commit();
+    //await t.rollback();
+    await t.commit();
     res.status(200).send(booking);
 
   } catch (error) {
