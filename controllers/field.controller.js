@@ -7,8 +7,6 @@ exports.createField = async (req, res) => {
     const farmerId = req.userId; // From auth middleware
     const { field_name, field_polygon, calculated_area_acres } = req.body;
 
-    // field_polygon should be a valid GeoJSON Polygon object 
-    // calculated_area_acres is the area calculated on the frontend (or backend) 
     
     if (!field_polygon ||!calculated_area_acres ||!field_name) {
       return res.status(400).send({ message: 'Missing required field data.' });

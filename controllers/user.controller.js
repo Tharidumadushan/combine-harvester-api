@@ -8,17 +8,29 @@ const UserProfile = db.UserProfile;
  */
 exports.getMyProfile = async (req, res) => {
   try {
-    // req.userId is added by the 'verifyToken' auth middleware
-    const userId = req.userId; 
+    const userId = req.userId;   // req.userId is added by the 'verifyToken' auth middleware
+    const requestedUserId = req.params.userId; // Came with the front end to get a userdata for a different user
+    let user = new(User)
     
-    const user = await User.findByPk(userId, {
+    if(requestedUserId){
+      user = await User.findByPk(requestedUserId, {
       attributes: ['email', 'phone_number', 'role', 'language_preference'], // Exclude password_hash
       include: {
         model: UserProfile,
         attributes: ['first_name', 'last_name', 'business_name', 'address','city']
       }
     });
-
+    }
+    else{
+      user = await User.findByPk(userId, {
+      attributes: ['email', 'phone_number', 'role', 'language_preference'], // Exclude password_hash
+      include: {
+        model: UserProfile,
+        attributes: ['first_name', 'last_name', 'business_name', 'address','city']
+      }
+    });
+    }
+    
     if (!user) {
       return res.status(404).send({ message: 'User profile not found.' });
     }
