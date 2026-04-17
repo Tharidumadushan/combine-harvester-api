@@ -41,6 +41,22 @@ exports.getMyProfile = async (req, res) => {
   }
 };
 
+exports.getAllUsers = async (req, res) => {
+  try {
+      let user = await User.findAll( {
+      attributes: ['user_id','email', 'phone_number', 'role', 'language_preference'], // Exclude password_hash
+      include: {
+        model: UserProfile,
+        attributes: ['first_name', 'last_name', 'business_name', 'address','city']
+      }
+    });
+    
+    res.status(200).send(user);
+  } catch (error) {
+    res.status(500).send({ message: error.message || 'Error fetching profile.' });
+  }
+};
+
 /**
  * @route PUT /api/users/me
  * @description Update the profile of the currently logged-in user.
@@ -75,3 +91,4 @@ exports.updateMyProfile = async (req, res) => {
     res.status(500).send({ message: error.message || 'Error updating profile.' });
   }
 };
+
