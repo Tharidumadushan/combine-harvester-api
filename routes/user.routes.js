@@ -14,6 +14,7 @@ router.get('/me/:userId', userController.getMyProfile);
 // Route GET /api/users/me || Description Get the profile of the currently logged-in user. || Access Private
 router.get('/me', userController.getMyProfile);
 
+router.get('/all',userController.getAllUsers);
 
 /**
  * @route PUT /api/users/me
