@@ -76,3 +76,279 @@ exports.getAdminTopWidgetData = async (req, res) => {
     res.status(500).send({ message: error.message || 'Error fetching dashboard stats.' });
   }
 };
+
+exports.getHarvesterOwnerStatus = async (req, res) => {
+  user = req.user;
+}
+
+
+exports.getOwnerDashboardStats = async (req, res) => {
+  try {
+    const ownerId = req.userId;
+    // DATE RANGES
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
+
+    const monthStart = new Date(
+      new Date().getFullYear(),
+      new Date().getMonth(),
+      1
+    );
+
+    const monthEnd = new Date(
+      new Date().getFullYear(),
+      new Date().getMonth() + 1,
+      0,
+      23,
+      59,
+      59,
+      999
+    );
+
+    // ============================================
+    // GET OWNER HARVESTERS
+    // ============================================
+
+    const harvesters = await Harvester.findAll({
+      where: {
+        owner_id: ownerId
+      },
+      attributes: ['harvester_id', 'is_active']
+    });
+
+    const harvesterIds =
+      harvesters.map(h => h.harvester_id);
+
+    // ============================================
+    // TOTAL HARVESTERS
+    // ============================================
+
+    const totalHarvesters =
+      harvesters.length;
+
+    // ============================================
+    // ACTIVE HARVESTERS
+    // ============================================
+
+    const activeHarvesters =
+      harvesters.filter(h => h.is_active).length;
+
+    // ============================================
+    // TODAY EARNINGS
+    // ============================================
+
+    const todayBookings =
+      await Booking.findAll({
+
+        where: {
+
+          harvester_id: {
+            [Op.in]: harvesterIds
+          },
+
+          booking_status: 'COMPLETED',
+
+          updated_at: {
+            [Op.between]: [
+              todayStart,
+              todayEnd
+            ]
+          }
+        },
+
+        attributes: ['calculated_cost']
+      });
+
+    const earningsToday =
+      todayBookings.reduce(
+        (sum, booking) =>
+          sum +
+          Number(booking.calculated_cost),
+        0
+      );
+
+    // ============================================
+    // MONTH EARNINGS
+    // ============================================
+
+    const monthBookings =
+      await Booking.findAll({
+
+        where: {
+
+          harvester_id: {
+            [Op.in]: harvesterIds
+          },
+
+          booking_status: 'COMPLETED',
+
+          updated_at: {
+            [Op.between]: [
+              monthStart,
+              monthEnd
+            ]
+          }
+        },
+
+        attributes: [
+          'calculated_cost'
+        ]
+      });
+
+    const earningsMonth =
+      monthBookings.reduce(
+        (sum, booking) =>
+          sum +
+          Number(booking.calculated_cost),
+        0
+      );
+
+    // ============================================
+    // JOBS THIS MONTH
+    // ============================================
+
+    const jobsMonth =
+      monthBookings.length;
+
+    // ============================================
+    // PENDING REQUESTS
+    // ============================================
+
+    const pendingRequests =
+      await Booking.count({
+
+        where: {
+
+          harvester_id: {
+            [Op.in]: harvesterIds
+          },
+
+          booking_status: 'REQUESTED'
+        }
+      });
+
+    // ============================================
+    // HARVESTERS CURRENTLY IN USE
+    // ============================================
+
+    const inUseHarvesters =
+      await Booking.count({
+
+        distinct: true,
+
+        col: 'harvester_id',
+
+        where: {
+
+          harvester_id: {
+            [Op.in]: harvesterIds
+          },
+
+          booking_status: {
+            [Op.in]: [
+              'CONFIRMED',
+              'IN_PROGRESS'
+            ]
+          }
+        }
+      });
+
+    // ============================================
+    // FINAL RESPONSE
+    // ============================================
+
+    return res.status(200).json({
+
+      success: true,
+
+      data: {
+
+        earningsToday,
+
+        earningsMonth,
+
+        jobsMonth,
+
+        pendingRequests,
+
+        totalHarvesters,
+
+        activeHarvesters,
+
+        inUseHarvesters
+      }
+    });
+
+  } catch (error) {
+
+    console.error(
+      'Dashboard Stats Error:',
+      error
+    );
+
+    return res.status(500).json({
+
+      success: false,
+
+      message:
+        error.message ||
+        'Failed to load dashboard stats.'
+    });
+  }
+};
+
+
+exports.getFarmerDashboard = async (req, res) => {
+  try {
+    const farmerId = req.userId;
+
+    const [fields, bookings] = await Promise.all([
+      // All fields belonging to this farmer
+      Field.findAll({
+        where:      { farmer_id: farmerId },
+        attributes: ['field_id', 'calculated_area_acres'],
+      }),
+
+      // All non-terminal bookings for this farmer
+      Booking.findAll({
+        where: {
+          farmer_id:      farmerId,
+          booking_status: {
+            [Op.notIn]: ['REJECTED', 'CANCELLED_BY_FARMER', 'CANCELLED_BY_OWNER', 'COMPLETED'],
+          },
+        },
+        attributes: ['booking_id', 'booking_status'],
+      }),
+    ]);
+
+    const totalAcres = fields.reduce(
+      (sum, f) => sum + parseFloat(f.calculated_area_acres ?? '0'), 0
+    );
+
+    const activeBookings  = bookings.filter((b) =>
+      ['CONFIRMED', 'IN_PROGRESS'].includes(b.booking_status)
+    ).length;
+
+    const pendingBookings = bookings.filter((b) =>
+      b.booking_status === 'REQUESTED'
+    ).length;
+
+    return res.status(200).json({
+      data: {
+        totalFields:    fields.length,
+        totalAcres:     parseFloat(totalAcres.toFixed(2)),
+        activeBookings,
+        pendingBookings,
+      },
+    });
+
+  } catch (error) {
+    console.error('[getFarmerDashboard]', error);
+    return res.status(500).json({
+      message: error.message || 'Failed to load farmer dashboard data.',
+    });
+  }
+};
