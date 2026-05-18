@@ -11,7 +11,6 @@ module.exports = (sequelize, DataTypes) => {
       // Foreign key association to Bookings.booking_id
     },
     status: {
-      // This ENUM should mirror the one in the Booking model
       type: DataTypes.ENUM(
         'REQUESTED',
         'CONFIRMED',
@@ -25,8 +24,11 @@ module.exports = (sequelize, DataTypes) => {
     },
     changed_by_user_id: {
       type: DataTypes.UUID,
-      allowNull: true // Can be null if changed by the system
-      // Foreign key association to Users.user_id
+      allowNull: true
+    },
+      notes: {
+      type: DataTypes.STRING,
+      allowNull: true,
     }
   }, {
     tableName: 'BookingStatusHistory',

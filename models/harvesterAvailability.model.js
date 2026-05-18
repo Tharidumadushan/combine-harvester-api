@@ -15,6 +15,9 @@ module.exports = (sequelize, DataTypes) => {
       // It's an array with two dates:
       type: DataTypes.RANGE(DataTypes.DATE),
       allowNull: false
+    },
+    active:{
+      type:Boolean
     }
   }, {
     tableName: 'HarvesterAvailability',

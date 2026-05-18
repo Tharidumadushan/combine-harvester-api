@@ -37,7 +37,9 @@ module.exports = (sequelize, DataTypes) => {
         'CANCELLED_BY_FARMER',
         'CANCELLED_BY_OWNER',
         'IN_PROGRESS',
-        'COMPLETED'
+        'COMPLETED',
+        'CANCELLATION_REQUESTED',
+        'CANCELLATION_APPROVED'
       ),
       allowNull: false,
       defaultValue: 'REQUESTED'

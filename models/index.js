@@ -177,6 +177,16 @@ db.Notification.belongsTo(db.Booking, {
   foreignKey: 'booking_id'
 });
 
+db.HarvesterAvailability.hasMany(db.Booking, {
+  foreignKey: "availability_id",
+  as: "Booking",
+});
+
+db.Booking.belongsTo(db.HarvesterAvailability, {
+  foreignKey: "availability_id",
+  as: "HarvesterAvailability",
+});
+
 
 // Export the db object, which now contains:
 // 1. The Sequelize connection instance ('sequelize')
