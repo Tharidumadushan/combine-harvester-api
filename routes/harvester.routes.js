@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
 
-// --- We will import middleware and controllers here ---
 const harvesterController = require('../controllers/harvester.controller');
 const { verifyToken } = require('../middleware/auth.middleware');
 const { isHarvesterOwner } = require('../middleware/role.middleware');

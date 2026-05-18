@@ -3,29 +3,59 @@ const router = express.Router();
 
 // --- middleware and controllers  ---
 const bookingController = require('../controllers/booking.controller');
- const { verifyToken } = require('../middleware/auth.middleware');
- const { isFarmer, isHarvesterOwner } = require('../middleware/role.middleware');
+const { verifyToken } = require('../middleware/auth.middleware');
+const { isFarmer, isHarvesterOwner } = require ('../middleware/role.middleware');
 
 // Apply token verification to all routes in this file
 router.use(verifyToken);
 
-// Route POST /api/bookings || A Farmer creates a new booking request. || access Private (Farmer only)
-router.post('/', [isFarmer], bookingController.createBooking);
-
-// GET /api/bookings || Description Get all bookings for the current user (context-aware: Farmer sees theirs, Owner sees theirs. || access Private
+// GET /api/bookings 
+// Description Get all bookings for the current user (context-aware: Farmer sees theirs, Owner sees theirs.
 router.get('/', bookingController.getMyBookings);
 
-//[Route] GET /api/bookings/:bookingId [Description] Get details for a single booking. [Access] Private (Farmer or Owner of this booking)
+// GET /api/bookings/:bookingId
+// Get details for a single booking.
  router.get('/:bookingId', bookingController.getBookingById);
 
-// Route PUT /api/bookings/:bookingId/reject || Description A Farmer cancels their booking. || Access Private (Farmer only)
+
+// POST /api/bookings 
+// A Farmer creates a new booking request.
+router.post('/', [isFarmer], bookingController.createBooking);
+
+
+// PUT /api/bookings/:bookingId/cancel
+// Farmer cancels their booking.
 router.put('/:bookingId/cancel', [isFarmer], bookingController.cancelBooking);
 
-//[Route] PUT /api/bookings/:bookingId/accept [Description] A Harvester Owner accepts a booking request. [Access] Private (Harvester Owner only)
+//Accept
+// PUT /api/bookings/:bookingId/accept 
+// Harvester Owner accepts a booking request
 router.put('/:bookingId/accept', [isHarvesterOwner], bookingController.acceptBooking);
 
-//Route PUT /api/bookings/:bookingId/reject [Description] A Harvester Owner rejects a booking request. [Access] Private (Harvester Owner only)
+//Request to Cancel
+// PUT /api/bookings/:bookingId/request-cancellation 
+// Farmer request to cancel the booking
+router.post('/:bookingId/request-cancellation', [isFarmer], bookingController.requestCancellation);
+
+//Accept Cancel Request
+// PUT /api/bookings/:bookingId/resolve-cancellation 
+// Harvester Owner accepts a booking request
+router.patch('/:bookingId/resolve-cancellation', [isHarvesterOwner], bookingController.resolveCancellationRequest);
+
+// Reject
+// PUT /api/bookings/:bookingId/reject
+// A Harvester Owner rejects a booking request. 
 router.put('/:bookingId/reject', [isHarvesterOwner], bookingController.rejectBooking);
+
+// In Progress
+// PUT /api/bookings/:bookingId/inprogress
+// A Harvester Owner rejects a booking request. 
+router.put('/:bookingId/inprogress', [isHarvesterOwner], bookingController.startBooking);
+
+//Completed
+// PUT /api/bookings/:bookingId/completed
+// A Harvester Owner rejects a booking request. 
+router.put('/:bookingId/complete', [isFarmer], bookingController.completeBooking);
 
 
 module.exports = router;

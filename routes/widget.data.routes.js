@@ -9,4 +9,8 @@ router.use(verifyToken);
 
 router.get('/',widgetDataController.getAdminTopWidgetData );
 
+router.get('/ownerdashboard',verifyToken,widgetDataController.getOwnerDashboardStats);
+
+router.get('/farmerdashboard', verifyToken, widgetDataController.getFarmerDashboard);
+
 module.exports = router;
