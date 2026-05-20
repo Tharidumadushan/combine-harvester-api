@@ -3,7 +3,7 @@ const router = express.Router();
 
 const harvesterController = require('../controllers/harvester.controller');
 const { verifyToken } = require('../middleware/auth.middleware');
-const { isHarvesterOwner } = require('../middleware/role.middleware');
+const { isHarvesterOwner,isAdmin } = require('../middleware/role.middleware');
 
 router.use(verifyToken);
 
@@ -19,7 +19,7 @@ router.get('/my',[isHarvesterOwner],harvesterController.myHarvesters);
 router.get('/:harvesterId', harvesterController.getHarvesterDetails);
 
 //route PUT /api/harvesters/:harvesterId || description Update a harvester's details. || access Private (Owner of this harvester only)
-router.put('/:harvesterId',[isHarvesterOwner], harvesterController.updateHarvester);
+router.put('/:harvesterId', harvesterController.updateHarvester);
 
 //#region  --- Routes for Pricing and Availability 
 
