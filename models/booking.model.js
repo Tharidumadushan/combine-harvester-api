@@ -21,8 +21,11 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.UUID,
       allowNull: false
     },
+    availability_id:{
+      type: DataTypes.UUID,
+      allowNull: false
+    },
     booking_time_range: {
-      // The scheduled start and end time 
       type: DataTypes.RANGE(DataTypes.DATE),
       allowNull: false
     },
@@ -34,7 +37,9 @@ module.exports = (sequelize, DataTypes) => {
         'CANCELLED_BY_FARMER',
         'CANCELLED_BY_OWNER',
         'IN_PROGRESS',
-        'COMPLETED'
+        'COMPLETED',
+        'CANCELLATION_REQUESTED',
+        'CANCELLATION_APPROVED'
       ),
       allowNull: false,
       defaultValue: 'REQUESTED'

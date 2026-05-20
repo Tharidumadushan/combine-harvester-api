@@ -19,6 +19,6 @@ router.post('/', fieldController.createField);
 router.get('/:fieldId', fieldController.getFieldById);
 
 //Route PUT /api/fields/:fieldId || description Update a field (e.g., new polygon or name). ||  @access Private (Farmer only)
-//router.put('/:fieldId', fieldController.updateField);
+router.put('/:fieldId', fieldController.updateField);
  
 module.exports = router;

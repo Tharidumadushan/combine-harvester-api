@@ -1,24 +1,190 @@
 const db = require('../models');
+const {sequelize, Sequelize } = require("../models");
 const Harvester = db.Harvester;
 const HarvesterPricing = db.HarvesterPricing;
 const HarvesterAvailability = db.HarvesterAvailability;
 
+
+// ── Sanitise helper — converts "" → null for numeric DB columns ──────────────
+// PostgreSQL rejects empty strings for INTEGER and DECIMAL fields.
+// Call this on every optional numeric value before writing to the DB.
+const toInt     = (v) => (v === "" || v === null || v === undefined) ? null : parseInt(v, 10);
+const toDecimal = (v) => (v === "" || v === null || v === undefined) ? null : parseFloat(v);
+const toStr     = (v) => (v === "" || v === null || v === undefined) ? null : String(v).trim();
+
 exports.createHarvester = async (req, res) => {
   try {
-    const ownerId = req.userId; // From auth middleware
-    const { pricing_id, model_name, description, capacity } = req.body;
+    const ownerId = req.userId;
+
+    const {
+      harvester_name, model_name, brand, description, is_active,
+      manufacture_year, contact_number,
+      engine_hp, fuel_type, acres_per_hour, capacity,
+      header_width_feet, grain_tank_capacity_liters,
+      machine_weight_kg, engine_working_hours,
+      supported_crops, terrain_type,
+      transport_available, operator_included,
+      current_district, service_radius_km,
+      home_location, current_location, live_tracking_enabled,
+    } = req.body;
+
+    // ── Required field validation ─────────────────────────────────────────
+    const missing = [];
+    if (!harvester_name)        missing.push("harvester_name");
+    if (!model_name)            missing.push("model_name");
+    if (!brand)                 missing.push("brand");
+    if (!acres_per_hour)        missing.push("acres_per_hour");
+    if (!current_district)      missing.push("current_district");
+    if (!supported_crops?.length) missing.push("supported_crops");
+
+    if (missing.length) {
+      return res.status(400).json({
+        message: `Missing required fields: ${missing.join(", ")}`,
+      });
+    }
+
+    // ── Geography helper ──────────────────────────────────────────────────
+    const toPoint = (coords) => {
+      if (!coords?.lat || !coords?.lng) return null;
+      return Sequelize.fn(
+        "ST_SetSRID",
+        Sequelize.fn("ST_MakePoint", coords.lng, coords.lat),
+        4326
+      );
+    };
 
     const harvester = await Harvester.create({
-      pricing_id,
       owner_id: ownerId,
-      model_name,
-      description,
-      capacity
+
+      // Basic info — strings are safe, still sanitise for empty
+      harvester_name:   toStr(harvester_name),
+      model_name:       toStr(model_name),
+      brand:            toStr(brand),
+      description:      toStr(description),
+      is_active:        false,
+      manufacture_year: toInt(manufacture_year),     // ← was crashing with ""
+      contact_number:   toStr(contact_number),
+
+      // Specs — all numeric columns must go through toInt / toDecimal
+      engine_hp:                   toInt(engine_hp),             // ← $8, the crash culprit
+      fuel_type:                   toStr(fuel_type),
+      acres_per_hour:              toDecimal(acres_per_hour),
+      capacity:                    toStr(capacity ?? acres_per_hour), // legacy STRING col
+      header_width_feet:           toDecimal(header_width_feet),  // ← would also crash
+      grain_tank_capacity_liters:  toDecimal(grain_tank_capacity_liters),
+      machine_weight_kg:           toDecimal(machine_weight_kg),
+      engine_working_hours:        toInt(engine_working_hours),
+
+      // Operations
+      supported_crops,
+      terrain_type:        toStr(terrain_type),
+      transport_available: transport_available ?? false,
+      operator_included:   operator_included   ?? true,
+
+      // Location
+      current_district:      toStr(current_district),
+      service_radius_km:     toDecimal(service_radius_km),
+      home_location:         toPoint(home_location),
+      current_location:      toPoint(current_location),
+      location_updated_at:   current_location ? new Date() : null,
+      live_tracking_enabled: live_tracking_enabled ?? false,
+
+      // Stats always start at zero
+      average_rating: 0,
+      completed_jobs: 0,
     });
 
-    res.status(201).send(harvester);
+    return res.status(201).json(harvester);
+
   } catch (error) {
-    res.status(500).send({ message: error.message || 'Error creating harvester.' });
+    console.error("[createHarvester]", error);
+    return res.status(500).json({ message: error.message || "Error creating harvester." });
+  }
+};
+
+
+exports.updateHarvester = async (req, res) => {
+  try {
+    //console.log("req.body:", JSON.stringify(req.body, null, 2));
+    const ownerId     = req.userId;
+    const harvesterId = req.params.harvesterId;
+
+    const harvester = await Harvester.findOne({ where: { harvester_id: harvesterId } });
+
+    if (!harvester) {
+      return res.status(404).json({ message: "Harvester not found." });
+    }
+    if (harvester.owner_id !== ownerId) {
+      return res.status(403).json({ message: "Not authorised to edit this harvester." });
+    }
+
+    const {
+      harvester_name, model_name, brand, description, is_active,
+      manufacture_year, contact_number,
+      engine_hp, fuel_type, acres_per_hour, capacity,
+      header_width_feet, grain_tank_capacity_liters,
+      machine_weight_kg, engine_working_hours,
+      supported_crops, terrain_type,
+      transport_available, operator_included,
+      current_district, service_radius_km,
+      home_location, current_location, live_tracking_enabled,
+    } = req.body; 
+
+    const toPoint = (coords) => {
+      if (!coords?.lat || !coords?.lng) return null;
+      return Sequelize.fn(
+        "ST_SetSRID",
+        Sequelize.fn("ST_MakePoint", coords.lng, coords.lat),
+        4326
+      );
+    };
+
+    // Build update payload — only include keys that were actually sent
+    const updates = {};
+
+    if (harvester_name  !== undefined) updates.harvester_name  = toStr(harvester_name);
+    if (model_name      !== undefined) updates.model_name      = toStr(model_name);
+    if (brand           !== undefined) updates.brand           = toStr(brand);
+    if (description     !== undefined) updates.description     = toStr(description);
+    if (is_active       !== undefined) updates.is_active       = is_active;
+    if (manufacture_year !== undefined) updates.manufacture_year = toInt(manufacture_year);
+    if (contact_number  !== undefined) updates.contact_number  = toStr(contact_number);
+
+    if (engine_hp                  !== undefined) updates.engine_hp                  = toInt(engine_hp);
+    if (fuel_type                  !== undefined) updates.fuel_type                  = toStr(fuel_type);
+    if (acres_per_hour             !== undefined) {
+      updates.acres_per_hour = toDecimal(acres_per_hour);
+      updates.capacity       = String(acres_per_hour ?? ""); // legacy STRING col
+    }
+    if (capacity                   !== undefined) updates.capacity                   = toStr(capacity);
+    if (header_width_feet          !== undefined) updates.header_width_feet          = toDecimal(header_width_feet);
+    if (grain_tank_capacity_liters !== undefined) updates.grain_tank_capacity_liters = toDecimal(grain_tank_capacity_liters);
+    if (machine_weight_kg          !== undefined) updates.machine_weight_kg          = toDecimal(machine_weight_kg);
+    if (engine_working_hours       !== undefined) updates.engine_working_hours       = toInt(engine_working_hours);
+
+    if (supported_crops     !== undefined) updates.supported_crops     = supported_crops;
+    if (terrain_type        !== undefined) updates.terrain_type        = toStr(terrain_type);
+    if (transport_available !== undefined) updates.transport_available = transport_available;
+    if (operator_included   !== undefined) updates.operator_included   = operator_included;
+
+    if (current_district      !== undefined) updates.current_district      = toStr(current_district);
+    if (service_radius_km     !== undefined) updates.service_radius_km     = toDecimal(service_radius_km);
+    if (live_tracking_enabled !== undefined) updates.live_tracking_enabled = live_tracking_enabled;
+
+    if (home_location    !== undefined) updates.home_location    = toPoint(home_location);
+    if (current_location !== undefined) {
+      updates.current_location    = toPoint(current_location);
+      updates.location_updated_at = current_location ? new Date() : null;
+    }
+
+    await harvester.update(updates);
+
+    const updated = await Harvester.findOne({ where: { harvester_id: harvesterId } });
+    return res.status(200).json(updated);
+
+  } catch (error) {
+    console.error("[updateHarvester]", error);
+    return res.status(500).json({ message: error.message || "Error updating harvester." });
   }
 };
 
@@ -56,6 +222,7 @@ exports.myHarvesters = async (req, res) => {
   }
 };
 
+// Pricing Rules .......................................
 
 exports.addPricingRule = async (req, res) => {
   try {
@@ -87,7 +254,6 @@ exports.addPricingRule = async (req, res) => {
   }
 };
 
-
 exports.deletePricingRule = async (req, res) => {
   try {
     const ownerId = req.userId;
@@ -109,6 +275,8 @@ exports.deletePricingRule = async (req, res) => {
   }
 };
 
+
+// Available Slots
 const getLocalISOString = (date) => {
     const pad = (num) => String(num).padStart(2, '0');
     const offset = -date.getTimezoneOffset();
@@ -208,34 +376,6 @@ exports.addAvailabilitySlot = async (req, res) => {
   }
 };
 
-
-// exports.addAvailabilitySlot = async (req, res) => {
-//   try {
-//     const ownerId = req.userId; 
-//     const { harvesterId } = req.params;
-//     const { availability_id,availability_range } = req.body;
-
-//     // Verify ownership
-//     const harvester = await Harvester.findByPk(harvesterId);
-//     if (!harvester) {
-//       return res.status(404).send({ message: 'Harvester not found.' });
-//     }
-//     if (harvester.owner_id !== ownerId) {
-//       return res.status(403).send({ message: 'Forbidden: You do not own this harvester.' });
-//     }
-
-//     const availability = await HarvesterAvailability.upsert({
-//       availability_id: availability_id,
-//       harvester_id: harvesterId,
-//       availability_range: availability_range
-//     });
-
-//     res.status(201).send(availability);
-//   } catch (error) {
-//     res.status(500).send({ message: error.message || 'Error adding availability.' });
-//   }
-// };
-
 exports.deleteAvailabilitySlot = async (req, res) => {
   try {
     const ownerId = req.userId;
@@ -280,38 +420,5 @@ exports.getHarvesterDetails = async (req, res) => {
 
   } catch (error) {
     res.status(500).send({ message: error.message || 'Error getting details.' });
-  }
-}
-
-exports.updateHarvester = async (req, res) => {
-  try {
-
-    const ownerId = req.userId; // From auth middleware
-    const { harvester_id, is_active, model_name, description, capacity } = req.body;
-    if (!harvester_id) {
-      return res.status(400).send({ message: "Harvester ID is required." });
-    }
-
-    const [updatedRows] = await Harvester.update(
-      {
-        model_name,
-        description,
-        capacity,
-        is_active
-      },
-      {
-        where: {
-          harvester_id: harvester_id
-        }
-      }
-    );
-
-    if (updatedRows === 0) {
-      return res.status(404).send({ message: "Harvester not found or not authorized." });
-    }
-
-    res.send({ message: "Harvester updated successfully." });
-  } catch (error) {
-    res.status(500).send({ message: error.message || 'Error Updating details.' });
   }
 }

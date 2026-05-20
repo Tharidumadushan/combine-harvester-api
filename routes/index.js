@@ -7,6 +7,12 @@ const userRoutes = require('./user.routes');
 const harvesterRoutes = require('./harvester.routes');
 const fieldRoutes = require('./field.routes');
 const bookingRoutes = require('./booking.routes');
+const notificationRoutes = require('./notification.routes');
+const widgetDataRoutes = require('./widget.data.routes')
+const reportRoutes = require('./report.routes')
+const misRoutes = require('./mis.routes')
+const availabilityRoutes = require('./availability.routes')
+const pricingRoutes = require('./pricing.routes');
 
 // Mount the imported routes onto their base paths
 router.use('/auth', authRoutes);
@@ -14,6 +20,12 @@ router.use('/users', userRoutes);
 router.use('/harvesters', harvesterRoutes);
 router.use('/fields', fieldRoutes);
 router.use('/bookings', bookingRoutes);
+router.use('/notifications', notificationRoutes);
+router.use('/widgetData',widgetDataRoutes);
+router.use('/reports',reportRoutes);
+router.use('/mis',misRoutes);
+router.use('/availability',availabilityRoutes);
+router.use('/pricing',pricingRoutes);
 
 // A simple health check route for the v1 API
 router.get('/', (req, res) => {

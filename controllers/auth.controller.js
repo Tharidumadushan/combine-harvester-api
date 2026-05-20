@@ -56,7 +56,25 @@ exports.register = async (req, res) => {
   try {
     const { email, password, phone_number, role, first_name, last_name, business_name,address } = req.body;
 
-    // 1. Create the User (password will be auto-hashed by the model hook)
+    // =========================================================
+    // 1. CHECK IF EMAIL ALREADY EXISTS
+    // =========================================================
+    const existingUser = await User.findOne({
+      where: {
+        email: email
+      }
+    });
+
+    if (existingUser) {
+      await t.rollback();
+
+      return res.status(400).json({
+        success: false,
+        message: 'Email is already registered'
+      });
+    }
+
+    // Create the User (password will be auto-hashed by the model hook)
     const user = await User.create({
       email,
       password_hash: password, // The hook converts this to a hash
@@ -64,7 +82,7 @@ exports.register = async (req, res) => {
       role,
     }, { transaction: t });
 
-    // 2. Create the associated UserProfile
+    // Create the associated UserProfile
     await UserProfile.create({
       user_id: user.user_id,
       first_name,
@@ -73,13 +91,12 @@ exports.register = async (req, res) => {
       address
     }, { transaction: t });
 
-    // 3. If both are successful, commit the transaction
+    //  commit the transaction
     await t.commit();
     
     res.status(201).send({ message: 'User registered successfully!' });
 
   } catch (error) {
-    // 4. If anything fails, roll back the transaction
     await t.rollback();
     res.status(500).send({ message: error.message || 'Registration failed.',info: error.errors });
   }
@@ -115,7 +132,7 @@ exports.login = async (req, res) => {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production', // Use 'secure' in production
       sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+      maxAge: 1 * 24 * 60 * 60 * 1000 // 1 days
     });
 
     // 3. Send Access Token in the response body

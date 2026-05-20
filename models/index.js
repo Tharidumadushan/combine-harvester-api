@@ -5,7 +5,7 @@ const path = require('path');
 const Sequelize = require('sequelize');
 const basename = path.basename(__filename);
 const env = process.env.NODE_ENV || 'development';
-// We need to point to the config file in the parent directory
+// point to the config file in the parent directory
 const config = require(__dirname + '/../config/config.js')[env];
 const db = {};
 
@@ -175,6 +175,16 @@ db.Booking.hasMany(db.Notification, {
 });
 db.Notification.belongsTo(db.Booking, {
   foreignKey: 'booking_id'
+});
+
+db.HarvesterAvailability.hasMany(db.Booking, {
+  foreignKey: "availability_id",
+  as: "Booking",
+});
+
+db.Booking.belongsTo(db.HarvesterAvailability, {
+  foreignKey: "availability_id",
+  as: "HarvesterAvailability",
 });
 
 

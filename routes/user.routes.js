@@ -8,12 +8,13 @@ const { verifyToken } = require('../middleware/auth.middleware');
 // Apply the token verification middleware to all routes in this file
 router.use(verifyToken);
 
-/**
- * @route GET /api/users/me
- * @description Get the profile of the currently logged-in user.
- * @access Private
- */
+// Route GET /api/users/me || Description Get the profile of the currently logged-in user. || Access Private
+router.get('/me/:userId', userController.getMyProfile);
+
+// Route GET /api/users/me || Description Get the profile of the currently logged-in user. || Access Private
 router.get('/me', userController.getMyProfile);
+
+router.get('/all',userController.getAllUsers);
 
 /**
  * @route PUT /api/users/me
