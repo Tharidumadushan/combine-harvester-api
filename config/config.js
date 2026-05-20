@@ -118,9 +118,9 @@ module.exports = {
   /**
    * Expiration time for Access Tokens (e.g., "15m").
    */
-  jwt_access_expiration: process.env.JWT_ACCESS_EXPIRATION || '15m',
+  jwt_access_expiration: process.env.JWT_ACCESS_EXPIRATION || '10m',
   /**
    * Expiration time for Refresh Tokens (e.g., "7d").
    */
-  jwt_refresh_expiration: process.env.JWT_REFRESH_EXPIRATION || '7d',
+  jwt_refresh_expiration: process.env.JWT_REFRESH_EXPIRATION || '1d',
 };
