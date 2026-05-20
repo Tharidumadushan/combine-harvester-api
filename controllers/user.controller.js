@@ -1,7 +1,9 @@
-// controllers/user.controller.js
+
 const db          = require('../models');
 const User        = db.User;
 const UserProfile = db.UserProfile;
+const { Op } = require('sequelize');
+const { sequelize } = require('../models');
 
 // ── All profile attributes returned to the frontend ─────────────────────────
 const PROFILE_ATTRIBUTES = [
@@ -14,7 +16,7 @@ const PROFILE_ATTRIBUTES = [
   'city',
   'state_province',
   'postal_code',
-  'country',
+  'country'
 ];
 
 const USER_ATTRIBUTES = [
@@ -196,6 +198,123 @@ exports.updateMyProfile = async (req, res) => {
     console.error('[updateMyProfile]', error);
     return res.status(500).json({
       message: error.message || 'Error updating profile.',
+    });
+  }
+};
+
+// Admin - Modify user data
+exports.adminUpdateUser = async (req, res) => {
+  const t = await sequelize.transaction();
+  try {
+    const { userId } = req.params;
+    const {
+      email, phone_number, role, is_active, language_preference,
+      UserProfile: profile,
+    } = req.body;
+
+    const [user, userProfile] = await Promise.all([
+      User.findByPk(userId, { transaction: t }),
+      UserProfile.findByPk(userId, { transaction: t }),
+    ]);
+
+    if (!user || !userProfile) {
+      await t.rollback();
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    const userUpdates = {};
+    if (email               !== undefined) userUpdates.email               = email;
+    if (phone_number        !== undefined) userUpdates.phone_number        = phone_number;
+    if (role                !== undefined) userUpdates.role                = role;
+    if (is_active           !== undefined) userUpdates.is_active           = is_active;
+    if (language_preference !== undefined) userUpdates.language_preference = language_preference;
+
+    const profileUpdates = {};
+    if (profile?.first_name     !== undefined) profileUpdates.first_name     = profile.first_name?.trim()     || null;
+    if (profile?.last_name      !== undefined) profileUpdates.last_name      = profile.last_name?.trim()      || null;
+    if (profile?.business_name  !== undefined) profileUpdates.business_name  = profile.business_name?.trim()  || null;
+    if (profile?.address_line1  !== undefined) profileUpdates.address_line1  = profile.address_line1?.trim()  || null;
+    if (profile?.address_line2  !== undefined) profileUpdates.address_line2  = profile.address_line2?.trim()  || null;
+    if (profile?.city           !== undefined) profileUpdates.city           = profile.city?.trim()           || null;
+    if (profile?.state_province !== undefined) profileUpdates.state_province = profile.state_province?.trim() || null;
+    if (profile?.postal_code    !== undefined) profileUpdates.postal_code    = profile.postal_code?.trim()    || null;
+    if (profile?.country        !== undefined) profileUpdates.country        = profile.country?.trim()        || null;
+
+    await Promise.all([
+      Object.keys(userUpdates).length    ? user.update(userUpdates, { transaction: t })       : Promise.resolve(),
+      Object.keys(profileUpdates).length ? userProfile.update(profileUpdates, { transaction: t }) : Promise.resolve(),
+    ]);
+
+    await t.commit();
+    return res.status(200).json({ message: "User updated successfully." });
+
+  } catch (error) {
+    await t.rollback();
+    console.error("[adminUpdateUser]", error);
+    return res.status(500).json({ message: error.message || "Failed to update user." });
+  }
+};
+
+
+// ─── GET /users ───────────────────────────────────────────────────────────────
+// Admin-only: returns all users with their profiles.
+// controllers/user.controller.js
+
+exports.toggleUserStatus = async (req, res) => {
+  const t = await sequelize.transaction();
+  try {
+    const { userId }   = req.params;
+    const { is_active } = req.body;
+
+    // ── Validate the incoming value ───────────────────────────────────────
+    if (typeof is_active !== "boolean") {
+      await t.rollback();
+      return res.status(400).json({
+        message: "'is_active' must be a boolean value.",
+      });
+    }
+
+    // ── Find the user ─────────────────────────────────────────────────────
+    const user = await User.findByPk(userId, { transaction: t });
+
+    if (!user) {
+      await t.rollback();
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    // ── Guard: prevent admins from disabling their own account ────────────
+    // This stops an admin from accidentally locking themselves out.
+    if (user.user_id === req.userId && !is_active) {
+      await t.rollback();
+      return res.status(400).json({
+        message: "You cannot disable your own account.",
+      });
+    }
+
+    // ── Guard: no change needed ───────────────────────────────────────────
+    if (user.is_active === is_active) {
+      await t.rollback();
+      return res.status(400).json({
+        message: `User is already ${is_active ? "active" : "inactive"}.`,
+      });
+    }
+
+    // ── Apply the status change ───────────────────────────────────────────
+    await user.update({ is_active }, { transaction: t });
+
+    await t.commit();
+
+    return res.status(200).json({
+      message:   `User ${is_active ? "enabled" : "disabled"} successfully.`,
+      user_id:   user.user_id,
+      is_active: user.is_active,
+    });
+
+  } catch (error) {
+    await t.rollback();
+    console.error("[toggleUserStatus]", error);
+    return res.status(500).json({
+      message: error.message || "Failed to update user status.",
     });
   }
 };
